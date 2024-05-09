@@ -2,6 +2,9 @@ import { session } from '../classroom-api-session.js';
 import './icon-pen.js';
 import './icon-trash.js';
 
+/**
+ * View HTML for this component
+ */
 const view = /*html*/`
 <style>
     :host {
@@ -169,20 +172,43 @@ const view = /*html*/`
 </dialog>
 `;
 
+/**
+ * StudentList component
+ */
 class StudentList extends HTMLElement {
-    editMode = false;
-    studentBeingEdited = null;
-
+    /**
+     * Observed attributes
+     */
     static get observedAttributes() {
         return ['teacher-id'];
     }
 
+    /**
+     * Indicates whether the component is in edit mode
+     * 
+     * @type {boolean}
+     */
+    editMode = false;
+
+    /**
+     * The student being edited
+     * 
+     * @type {Student}
+     */
+    studentBeingEdited = null;
+
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = view;
     }
 
+    /**
+     * Connected callback
+     */
     connectedCallback() {
         this.shadowRoot.getElementById('add-student').addEventListener('click', () => this.showAddStudentDialog());
         this.shadowRoot.getElementById('student-form').addEventListener('submit', event => {
@@ -193,21 +219,37 @@ class StudentList extends HTMLElement {
                 this.addStudent();
             }
         });
-        this.shadowRoot.getElementById('cancel-student-button').addEventListener('click', () => this.shadowRoot.querySelector('#student-dialog').close());
+        this.shadowRoot.getElementById('cancel-student-button').addEventListener('click', () => {
+            const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.querySelector('#student-dialog'));
+            dialog.close();
+        });
         this.loadStudents();
     }
 
+    /**
+     * Attribute changed callback
+     * 
+     * @param {string} name Name of the attribute
+     * @param {string} oldValue Old value of the attribute
+     * @param {string} newValue New value of the attribute
+     */
     attributeChangedCallback(name, oldValue, newValue) {
         if (name === 'teacher-id' && oldValue !== newValue) {
             this.loadStudents();
         }
     }
 
+    /**
+     * Load students
+     * 
+     * @returns {Promise<void>}
+     */
     async loadStudents() {
-        const teacherId = this.getAttribute('teacher-id');
+        const teacherId = parseInt(this.getAttribute('teacher-id'));
+        const host = /**@type {HTMLElement} */ (this.shadowRoot.host);
 
         if (!teacherId) {
-            this.shadowRoot.getRootNode().host.style.display = 'none';
+            host.style.display = 'none';
             return;
         }
         const teacher = await session.getTeacher(teacherId);
@@ -216,18 +258,22 @@ class StudentList extends HTMLElement {
         const studentList = this.shadowRoot.getElementById('teacher-students');
         studentList.innerHTML = '';
         students.forEach(student => {
-            const studentElement = this.shadowRoot.getElementById('student-template').content.cloneNode(true);
+            const template = /** @type {HTMLTemplateElement} */ (this.shadowRoot.getElementById('student-template'));
+            const studentElement = /** @type {HTMLElement} */ (template.content.cloneNode(true));
             studentElement.querySelector('.student-name').textContent = `${student.firstName} ${student.lastName}`;
             studentElement.querySelector('.student-email').textContent = student.email;
             studentElement.querySelector('.student-edit-button').addEventListener('click', () => this.showEditStudentDialog(student));
             studentElement.querySelector('.student-delete-button').addEventListener('click', () => this.deleteStudent(student));
             studentList.appendChild(studentElement);
         });
-        this.shadowRoot.getRootNode().host.style.display = 'block';
+        host.style.display = 'block';
     }
 
+    /**
+     * Show add student dialog
+     */
     showAddStudentDialog() {
-        const dialog = this.shadowRoot.getElementById('student-dialog');
+        const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('student-dialog'));
         this.editMode = false;
         this.studentBeingEdited = null;
 
@@ -236,11 +282,17 @@ class StudentList extends HTMLElement {
         dialog.showModal();
     }
 
+    /**
+     * Show edit student dialog
+     * 
+     * @param {Student} student Student to edit
+     */
     showEditStudentDialog(student) {
-        const dialog = this.shadowRoot.getElementById('student-dialog');
+        const dialog = /** @type {HTMLDialogElement} */(this.shadowRoot.getElementById('student-dialog'));
         this.editMode = true;
         this.studentBeingEdited = student;
 
+        /** @type {HTMLFormElement} */
         const form = dialog.querySelector('form');
         form.firstName.value = student.firstName;
         form.lastName.value = student.lastName;
@@ -249,15 +301,24 @@ class StudentList extends HTMLElement {
         dialog.showModal();
     }
 
+    /**
+     * Add student
+     * 
+     * @returns {Promise<void>}
+     */
     async addStudent() {
-        const teacherId = this.getAttribute('teacher-id');
-
+        const teacherId = parseInt(this.getAttribute('teacher-id'));
+  
         if (!teacherId) {
             return;
         }
 
-        const form = this.shadowRoot.getElementById('student-form');
+        const dialog = /** @type {HTMLDialogElement} */(this.shadowRoot.getElementById('student-dialog'));
+        const form = /** @type {HTMLFormElement} */ (this.shadowRoot.getElementById('student-form'));
+        
+        /** @type {Student} */
         const student = {
+            id: 0,
             firstName: form.firstName.value,
             lastName: form.lastName.value,
             email: form.email.value,
@@ -265,11 +326,17 @@ class StudentList extends HTMLElement {
         };
         await session.createStudent(student);
         this.loadStudents();
-        this.shadowRoot.querySelector('#student-dialog').close();
+        dialog.close();
     }
 
+    /**
+     * Update student
+     * 
+     * @returns {Promise<void>}
+     */
     async updateStudent() {
-        const form = this.shadowRoot.getElementById('student-form');
+        const dialog = /** @type {HTMLDialogElement} */(this.shadowRoot.getElementById('student-dialog'));
+        const form = /** @type {HTMLFormElement} */ (this.shadowRoot.getElementById('student-form'));
         const student = {
             id: this.studentBeingEdited.id,
             firstName: form.firstName.value,
@@ -279,9 +346,15 @@ class StudentList extends HTMLElement {
         };
         await session.updateStudent(this.studentBeingEdited.id, student);
         this.loadStudents();
-        this.shadowRoot.querySelector('#student-dialog').close();
+        dialog.close();
     }
 
+    /**
+     * Delete student
+     * 
+     * @param {Student} student Student to delete
+     * @returns {Promise<void>}
+     */
     async deleteStudent(student) {
         if (confirm(`Are you sure you want to delete [${student.firstName} ${student.lastName}]?`)) {
             await session.deleteStudent(student.id);

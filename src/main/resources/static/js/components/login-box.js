@@ -1,5 +1,8 @@
 import { session } from '../classroom-api-session.js';
 
+/**
+ * View HTML for this component
+ */
 const view = /*html*/`
 <style>
     :host {
@@ -69,13 +72,22 @@ const view = /*html*/`
 </div>
 `
 
+/**
+ * LoginBox component
+ */
 class LoginBox extends HTMLElement {
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = view;
     }
 
+    /**
+     * Connected callback
+     */
     connectedCallback() {
         this.shadowRoot.getElementById('login-form').addEventListener('submit', event => {
             event.preventDefault();
@@ -83,18 +95,26 @@ class LoginBox extends HTMLElement {
         });
     }
 
-    login() {
-        const username = this.shadowRoot.getElementById('login-form').querySelector('input[name="username"]').value;
-        const password = this.shadowRoot.getElementById('login-form').querySelector('input[name="password"]').value;
+    /**
+     * Login
+     * 
+     * @returns {Promise<void>}
+     */
+    async login() {
+        const username = 
+            /** @type HTMLInputElement */
+            (this.shadowRoot.getElementById('login-form').querySelector('input[name="username"]')).value;
+        const password = 
+            /** @type HTMLInputElement */
+            (this.shadowRoot.getElementById('login-form').querySelector('input[name="password"]')).value;
 
-        session.login(username, password)
-            .then(success => {
-                if (success) {
-                    this.dispatchEvent(new CustomEvent('login-success'));
-                } else {
-                    this.shadowRoot.getElementById('login-error').textContent = 'Invalid username or password';
-                }
-            });
+        const success = await session.login(username, password);
+        
+        if (success) {
+            this.dispatchEvent(new CustomEvent('login-success'));
+        } else {
+            this.shadowRoot.getElementById('login-error').textContent = 'Invalid username or password';
+        }
     }
 }
 

@@ -1,4 +1,10 @@
+/**
+ * IconPen component
+ */
 class IconPen extends HTMLElement {
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });

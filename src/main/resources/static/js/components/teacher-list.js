@@ -2,6 +2,9 @@ import { session } from '../classroom-api-session.js';
 import './icon-pen.js';
 import './icon-trash.js';
 
+/**
+ * View HTML for this component
+ */
 const view = /*html*/`
 <style>
     :host {
@@ -144,16 +147,36 @@ const view = /*html*/`
 </dialog>
 `;
 
+/**
+ * TeacherList component
+ */
 class TeacherList extends HTMLElement {
+    /**
+     * Indicates whether the component is in edit mode
+     * 
+     * @type {boolean}
+     */
     editMode = false;
+
+    /**
+     * The student being edited
+     * 
+     * @type {Teacher?}
+     */
     teacherBeingEdited = null;
 
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = view;
     }
 
+    /**
+     * Connected callback
+     */
     connectedCallback() {
         this.shadowRoot.getElementById('add-teacher').addEventListener('click', () => this.showAddTeacherDialog());
         this.shadowRoot.getElementById('teacher-form').addEventListener('submit', event => {
@@ -164,18 +187,26 @@ class TeacherList extends HTMLElement {
                 this.addTeacher();
             }
         });
-        this.shadowRoot.getElementById('cancel-teacher-button').addEventListener('click', () => this.shadowRoot.querySelector('#teacher-dialog').close());
+        this.shadowRoot.getElementById('cancel-teacher-button').addEventListener('click', () => {
+            const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('teacher-dialog'));
+            dialog.close();
+        });
         this.loadTeachers();
     }
 
+    /**
+     * Load teachers
+     * 
+     * @returns {Promise<void>}
+     */
     async loadTeachers() {
         const teachers = await session.getTeachers();
         if (teachers) {
             const teacherList = this.shadowRoot.getElementById('teacher-list');
             teacherList.innerHTML = '';
             teachers.forEach(teacher => {
-                const template = this.shadowRoot.getElementById('teacher-template');
-                const clone = template.content.cloneNode(true);
+                const template = /** @type {HTMLTemplateElement} */ (this.shadowRoot.querySelector('#teacher-template'));
+                const clone = /** @type {HTMLElement} */ (template.content.cloneNode(true));
                 clone.querySelector('.teacher-name').textContent = `${teacher.firstName} ${teacher.lastName}`;
                 clone.querySelector('.teacher-email').textContent = teacher.email;
                 clone.querySelector('.teacher-edit-button').addEventListener('click', () => this.showEditTeacherDialog(teacher));
@@ -189,24 +220,34 @@ class TeacherList extends HTMLElement {
         }
     }
 
+    /**
+     * Show add teacher dialog
+     */
     showAddTeacherDialog() {
-        const dialog = this.shadowRoot.getElementById('teacher-dialog');
+        const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('teacher-dialog'));
         this.editMode = false;
         this.teacherBeingEdited = null;
         dialog.querySelector('h1').textContent = 'Add Teacher';
-
+ 
+        /** @type {HTMLFormElement} */
         const form = dialog.querySelector('form');
         form.reset();
 
         dialog.showModal();
     }
 
+    /**
+     * Show edit teacher dialog
+     * 
+     * @param {Teacher} teacher 
+     */
     showEditTeacherDialog(teacher) {
-        const dialog = this.shadowRoot.getElementById('teacher-dialog');
+        const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('teacher-dialog'));
         this.editMode = true;
         this.teacherBeingEdited = teacher;
         dialog.querySelector('h1').textContent = 'Edit Teacher';
 
+        /** @type {HTMLFormElement} */
         const form = dialog.querySelector('form');
         form.reset();
         form.firstName.value = teacher.firstName;
@@ -216,31 +257,55 @@ class TeacherList extends HTMLElement {
         dialog.showModal();
     }
 
+    /**
+     * Add teacher
+     * 
+     * @returns {Promise<void>}
+     */
     async addTeacher() {
-        const form = this.shadowRoot.getElementById('teacher-form');
+        const form = /** @type {HTMLFormElement} */ (this.shadowRoot.getElementById('teacher-form'));
+
+        /** @type {Teacher} */
         const teacher = {
+            id: 0,
             firstName: form.firstName.value,
             lastName: form.lastName.value,
             email: form.email.value
         };
         const newTeacher = await session.createTeacher(teacher);
         this.loadTeachers();
-        this.shadowRoot.querySelector('#teacher-dialog').close();
+        const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('teacher-dialog'));
+        dialog.close();
     }
 
+    /**
+     * Update teacher
+     * 
+     * @returns {Promise<void>}
+     */
     async updateTeacher() {
-        const form = this.shadowRoot.getElementById('teacher-form');
+        const form = /** @type {HTMLFormElement} */ (this.shadowRoot.getElementById('teacher-form'));
+
+        /** @type {Teacher} */
         const teacher = {
-            id: this.teacherBeingEdited.id,
+            id: this.teacherBeingEdited.id,            
             firstName: form.firstName.value,
             lastName: form.lastName.value,
             email: form.email.value
         };
         await session.updateTeacher(this.teacherBeingEdited.id, teacher);
         this.loadTeachers();
-        this.shadowRoot.querySelector('#teacher-dialog').close();
+
+        const dialog = /** @type {HTMLDialogElement} */ (this.shadowRoot.getElementById('teacher-dialog'));
+        dialog.close();
     }
 
+    /**
+     * Delete teacher
+     * 
+     * @param {Teacher} teacher
+     * @returns {Promise<void>}
+     */
     async deleteTeacher(teacher) {
         if (confirm(`Are you sure you want to delete [${teacher.firstName} ${teacher.lastName}]?`)) {
             await session.deleteTeacher(teacher.id);

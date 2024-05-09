@@ -1,4 +1,10 @@
+/**
+ * IconTrash component
+ */
 class IconTrash extends HTMLElement {
+    /**
+     * Constructor
+     */
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
