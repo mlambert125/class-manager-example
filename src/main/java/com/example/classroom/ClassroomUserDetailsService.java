@@ -20,7 +20,7 @@ public class ClassroomUserDetailsService implements UserDetailsService {
     /**
      * The DAO used to access user data
      */
-    private UserDao userDao;
+    private final UserDao userDao;
 
     /**
      * Create a new instance of this class
