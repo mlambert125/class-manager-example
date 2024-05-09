@@ -13,35 +13,57 @@
         import './js/components/teacher-list.js';
         import {session} from './js/classroom-api-session.js';
 
-        document.querySelector('login-box').addEventListener('login-success', () => {
+        /**
+         * Show the login screen (and hide the app screen)
+         */
+        function showLogin() {
+            document.querySelector('.login').style.display = 'flex';
+            document.querySelector('.app').style.display = 'none';
+        }
+
+        /**
+         * Show the app screen (and hide the login screen)
+         */
+        function showApp() {
             document.querySelector('.login').style.display = 'none';
             document.querySelector('.app').style.display = 'grid';
+            loadTeacherFromLocalStorage();
+        }
+
+        /**
+         * Load the teacher from local storage and set it in the student list
+         */
+        function loadTeacherFromLocalStorage() {
+            const teacherId = localStorage.getItem('teacher-id');
+            if (teacherId) {
+                document.querySelector('student-list').setAttribute('teacher-id', teacherId);
+            }
+        }
+
+        document.querySelector('login-box').addEventListener('login-success', () => {
+            showApp();
         });
 
         document.querySelector('teacher-list').addEventListener('teacher-selected', (event) => {
             console.log(event.detail);
             const teacher = event.detail;
             document.querySelector('student-list').setAttribute('teacher-id', teacher.id);
+            localStorage.setItem('teacher-id', teacher.id);
         });
 
         if (session.tryAutoLogin()) {
-            document.querySelector('.login').style.display = 'none';
-            document.querySelector('.app').style.display = 'grid';
+            showApp();
         } else {
-            document.querySelector('.login').style.display = 'flex';
-            document.querySelector('.app').style.display = 'none';
+            showLogin();
         }
 
         document.querySelector('#logout').addEventListener('click', () => { 
-            document.querySelector('.login').style.display = 'flex';
-            document.querySelector('.app').style.display = 'none';
+            session.logout();
         });
 
         addEventListener('logout', () => {
-            document.querySelector('.login').style.display = 'flex';
-            document.querySelector('.app').style.display = 'none';
+            showLogin();
         });
-
     </script>
     <style>
         body {
